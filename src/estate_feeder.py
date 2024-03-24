@@ -1,4 +1,13 @@
-# mastrobot_example.py
+#! /usr/bin/python
+# -
+# *- coding: utf-8 -*-
+"""
+WEB SCRAPING LAB 3
+Date: '24 MAR 2024'
+Update: '24 MAR 2024'
+Author: Marco De Stavola '
+"""
+
 from telegram.bot import Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, PicklePersistence, CallbackQueryHandler
 from telegram import ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, replymarkup, Bot
