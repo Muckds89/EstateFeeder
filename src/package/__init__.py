@@ -1,2 +1,2 @@
-from .tools import scraper 
 from .AddMessage import AddMessage
+from .tools import Scraper,HandleText
