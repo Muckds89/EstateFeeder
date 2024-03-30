@@ -67,7 +67,7 @@ city = config["city"]
 
 def main():
     # TOKEN = config.token
-    TOKEN = "6746761128:AAEylhxnn4Y4mWn5fCr8yjui0gARfaBINWM"
+    TOKEN = ":"
     persistence = PicklePersistence(filename='../conversationbot')
 
     # create the updater, that will automatically create also a dispatcher and a queue to 
