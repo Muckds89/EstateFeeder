@@ -38,9 +38,9 @@ class Scraper():
 class HandleText():
 
     def __init__(self,context):
-        self.context = self.context
+        self.context = context
 
-    def create_data_model(self, context):
+    def create_data_model(self):
         self.context.user_data["min_price"] = None
         self.context.user_data["max_price"] = None
         self.context.user_data["min_surface"] = None
@@ -49,7 +49,7 @@ class HandleText():
         self.context.user_data['notifications'] = False
 
     # function to handle the /start command
-    def start(self,update):
+    async def start(self,update):
         first_name = update.message.chat.first_name
 
         if len(self.context.user_data) > 0:
@@ -57,8 +57,8 @@ class HandleText():
         else:
             update.message.reply_text(f"Ciao {first_name}, piacere di conoscerti!")
             self.context.user_data['chat_id'] = update.message.chat.id
-            create_data_model(self.context)
-            start_search(update, self.context)
+            create_data_model()
+            start_search(update)
 
     # function to handle normal text 
     def text(self, update):

@@ -16,7 +16,9 @@ import sys
 from bs4 import BeautifulSoup # this module helps in web scrapping.
 import requests  # this module helps us to download a web page 
 # from telegram.bot import Bot
-from telegram.ext import Updater, PicklePersistence, CommandHandler
+from telegram.ext import *
+# import keys
+    
 from package import Scraper, HandleText, AddMessage
 
 TYPE = 1
@@ -65,18 +67,31 @@ except Exception as e:
 url = config["url"]
 city = config["city"]
 
+async def start_commmand(update, context):
+    await update.message.reply_text('Miaoooooo')
+
 def main():
     # TOKEN = config.token
-    TOKEN = ":"
-    persistence = PicklePersistence(filename='../conversationbot')
-
+    TOKEN = '6845005306:AAHASISYw1H_hry4h3GO_expZhr13lxXdOI'
+    # persistence = PicklePersistence(filename='../conversationbot')
+    # my_persistence = PicklePersistence(filepath='../conversationbot')
     # create the updater, that will automatically create also a dispatcher and a queue to 
     # make them dialoge
-    updater = Updater(TOKEN, use_context=True, persistence=persistence, workers=32)
-    dispatcher = updater.dispatcher
+    # bot = telegram.Bot(TOKEN)
+    # updater = Updater(TOKEN, use_context=True)
+    # updater = Updater(TOKEN,  update_queue=True)
+    # dispatcher = updater.dispatcher
+
+    application = Application.builder().token(TOKEN).build()
+    # Commands
+    application.add_handler(CommandHandler('start', start_commmand))
+    # application.add_handler(CommandHandler('start', HandleText('start').start()))
+
+    # Run bot
+    application.run_polling(1.0)
 
     # add handlers for start and help commands
-    dispatcher.add_handler(CommandHandler("start", HandleText().start()))
+    # dispatcher.add_handler(CommandHandler("start", HandleText().start()))
 
     # url_zones_immobiliare = f"{url}{update.message.text}"
     # response = requests.get(url_zones_immobiliare)
@@ -84,6 +99,9 @@ def main():
     # print(result)
     # HandleText().text()
     # zones_immobiliare = json.loads(response.text)
+
+    # updater.start_polling()
+    # updater.idle()
     
 if __name__ == '__main__':
     main()
