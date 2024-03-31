@@ -1,25 +1,31 @@
-#! /usr/bin/python
-# -
-# *- coding: utf-8 -*-
+#!/usr/bin/env python
+# pylint: disable=unused-argument
+# This program is dedicated to the public domain under the CC0 license.
+
 """
-WEB SCRAPING 
-Date: '24 MAR 2024'
-Update: '24 MAR 2024'
-Author: Marco De Stavola '
+First, a few callback functions are defined. Then, those functions are passed to
+the Application and registered at their respective places.
+Then, the bot is started and runs until we press Ctrl-C on the command line.
+
+Usage:
+Example of a bot-user conversation using ConversationHandler.
+Send /start to initiate the conversation.
+Press Ctrl-C on the command line or send a signal to the process to stop the
+bot.
 """
 
-import pandas as pd
-import requests
-import json
-import os
-import sys
-from bs4 import BeautifulSoup # this module helps in web scrapping.
-import requests  # this module helps us to download a web page 
-# from telegram.bot import Bot
-from telegram.ext import *
-# import keys
-    
-from package import Scraper, HandleText, AddMessage
+import logging
+
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+    CallbackQueryHandler,
+)
 
 TYPE = 1
 QUERY_CITY = 2
@@ -33,76 +39,91 @@ END = 9
 
 RESULTS = 100
 
-folder_name             = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_TMP      = folder_name + "\\OUTPUT_TMP"
-LOG_FOLDER      = folder_name + "\\LOG\\"
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+# set higher logging level for httpx to avoid all GET and POST requests being logged
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
-#### LOG FOLDER AND FILE CREATION
-try:
-    if not os.path.exists(OUTPUT_TMP):
-        os.makedirs(OUTPUT_TMP)
-except Exception as e:
-    print("Error OUTPUT_TMP folder cannot be created. Exception: " + str(e))
-    sys.exit(1)
-try:
-    if not os.path.exists(LOG_FOLDER):
-        os.makedirs(LOG_FOLDER)
-except Exception as e:
-    print("Error LOG_FOLDER folder cannot be created. Exception: " + str(e))
-    sys.exit(1)
+logger = logging.getLogger(__name__)
 
-# GET A JSON FROM REQUEST OF IMMOBILLIARE WEBSITE  
-try:
-    JSON_FOLDER     = folder_name + "\\JSON"
-    config_path = '\\'.join([JSON_FOLDER, 'config.json'])
-    with open(config_path) as config_file:
-        config = json.load(config_file)
-        config = config["config"]
-except Exception as e:
-    JSON_FOLDER     = folder_name + "/JSON"
-    config_path = '/'.join([JSON_FOLDER, 'config.json'])
-    with open(config_path) as config_file:
-        config = json.load(config_file)
-        config = config["config"]  
-url = config["url"]
-city = config["city"]
+TYPE, LOCATION = range(2)
 
-async def start_commmand(update, context):
-    await update.message.reply_text('Miaoooooo')
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Starts the conversation and asks the user about their research type."""
+    reply_keyboard = [['Affittare', 'Acquistare','Altro']]
 
-def main():
-    # TOKEN = config.token
-    TOKEN = '6845005306:AAHASISYw1H_hry4h3GO_expZhr13lxXdOI'
-    # persistence = PicklePersistence(filename='../conversationbot')
-    # my_persistence = PicklePersistence(filepath='../conversationbot')
-    # create the updater, that will automatically create also a dispatcher and a queue to 
-    # make them dialoge
-    # bot = telegram.Bot(TOKEN)
-    # updater = Updater(TOKEN, use_context=True)
-    # updater = Updater(TOKEN,  update_queue=True)
-    # dispatcher = updater.dispatcher
+    await update.message.reply_text(
+        "Hi! My name is Professor Bot. I will hold a conversation with you. "
+        "Send /cancel to stop talking to me.\n\n"
+        "Do you want Affittare or Acquistare?",
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True, input_field_placeholder="Boy or Girl?"
+        ),
+    )
 
-    application = Application.builder().token(TOKEN).build()
-    # Commands
-    application.add_handler(CommandHandler('start', start_commmand))
-    # application.add_handler(CommandHandler('start', HandleText('start').start()))
+    return TYPE
 
-    # Run bot
-    application.run_polling(1.0)
+async def type(update, context) -> int:
+    """Stores the selected type and asks for a location."""
+    user = update.message.from_user
+    logger.info("Type of %s: %s", user.first_name, update.message.text)
+    await update.message.reply_text(
+        "I see! Please let me know which location, "
+        "so I know what you look like, or send /skip if you don't want to.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
-    # add handlers for start and help commands
-    # dispatcher.add_handler(CommandHandler("start", HandleText().start()))
+    return LOCATION
 
-    # url_zones_immobiliare = f"{url}{update.message.text}"
-    # response = requests.get(url_zones_immobiliare)
-    # result = Scraper(response).handle_rest_response()
-    # print(result)
-    # HandleText().text()
-    # zones_immobiliare = json.loads(response.text)
+async def location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the location."""
+    user = update.message.from_user
+    logger.info("Location of %s: %s", user.first_name, update.message.text)
 
-    # updater.start_polling()
-    # updater.idle()
-    
-if __name__ == '__main__':
+    return ConversationHandler.END
+
+async def skip_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Skips the location and asks for info about the user."""
+    user = update.message.from_user
+    logger.info("User %s did not send a location.", user.first_name)
+    await update.message.reply_text(
+        "You seem a bit paranoid! At last, tell me the location of the research."
+    )
+    return ConversationHandler.END
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Cancels and ends the conversation."""
+    user = update.message.from_user
+    logger.info("User %s canceled the conversation.", user.first_name)
+    await update.message.reply_text(
+        "Bye! I hope we can talk again some day.", reply_markup=ReplyKeyboardRemove()
+    )
+
+    return ConversationHandler.END
+
+def main() -> None:
+    """Run the bot."""
+    # Create the Application and pass it your bot's token.
+    application = Application.builder().token("").build()
+
+    # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            TYPE: [MessageHandler(filters.Regex("^(Affittare|Acquistare|Altro)$"),type)],
+            LOCATION: [
+                MessageHandler(filters.LOCATION, location), CommandHandler("skip", skip_location)], 
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
+
+    application.add_handler(conv_handler)
+
+    # Run the bot until the user presses Ctrl-C
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == "__main__":
     main()
-

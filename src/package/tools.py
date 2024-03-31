@@ -8,6 +8,9 @@ Update: '24 MAR 2024'
 Author: Marco De Stavola '
 """
 import json
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram.ext import *
+
 
 class Scraper():
     def __init__(self,response):
@@ -37,8 +40,9 @@ class Scraper():
 
 class HandleText():
 
-    def __init__(self,context):
-        self.context = context
+    def __init__(self):
+        # self.context = context
+        pass
 
     def create_data_model(self):
         self.context.user_data["min_price"] = None
@@ -48,8 +52,23 @@ class HandleText():
         self.context.user_data["searches"] = []
         self.context.user_data['notifications'] = False
 
+    async def start(update,context) -> int:
+        """Starts the conversation and asks the user about their gender."""
+        reply_keyboard = [["Boy", "Girl", "Other"]]
+
+        await update.message.reply_text(
+            "Hi! My name is Professor Bot. I will hold a conversation with you. "
+            "Send /cancel to stop talking to me.\n\n"
+            "Are you a boy or a girl?",
+            reply_markup=ReplyKeyboardMarkup(
+                reply_keyboard, one_time_keyboard=True, input_field_placeholder="Boy or Girl?"
+            ),
+        )
+
+        # return NAME
+
     # function to handle the /start command
-    async def start(self,update):
+    async def start1(self,update):
         first_name = update.message.chat.first_name
 
         if len(self.context.user_data) > 0:
