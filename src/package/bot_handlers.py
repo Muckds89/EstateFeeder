@@ -1,14 +1,16 @@
-import logging,os
+import logging,os, sys
+from selenium import webdriver
 from telegram import ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import ContextTypes, MessageHandler, CommandHandler, filters
-from bot_constants import TYPE, QUERY_CITY, TRIGGER_SCRAPING,END, RESULTS  # Adjust the import path as needed
+from telegram.ext import ContextTypes, MessageHandler, CommandHandler, filters,ConversationHandler
+from .bot_constants import TYPE, QUERY_CITY, TRIGGER_SCRAPING,END, RESULTS  # Adjust the import path as needed
 import requests
 from bs4 import BeautifulSoup
 import json
 from datetime import datetime
 import aiohttp
 import asyncio
+
 
 
 # Get current date and time as a formatted string
@@ -18,10 +20,6 @@ folder_name = datetime.now().strftime("%Y-%m-%d")
 logger = logging.getLogger(__name__)
 DEFAULT_STATE = 'START'  
 
-#create results folder
-folder = '../JSON/{folder_name}'
-if not os.path.exists(folder):
-    os.mkdir(folder)
 
 class StartHandler:
     @staticmethod
@@ -66,8 +64,22 @@ class LocationHandler:
     
     async def trigger_scraping(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         # Call the scraping function
-        await update.message.reply_text("Location noted! Initiating the research")
-        return await HandleLocationSearch.scrape_immobiliare(context.user_data['location'],folder)
+        user = update.message.from_user
+        logger.info("User %s triggered scraping.", user.first_name)
+        chat_id = update.message.chat_id
+        
+        city = context.user_data['location']  # Make sure 'city' is set in user data
+        folder = './RESULTS'  # Set the folder path
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+
+        try:
+            result = await HandleLocationSearch.scrape_immobiliare(city, folder)
+            await context.bot.send_message(chat_id=chat_id, text=result)
+        except Exception as e:
+            await context.bot.send_message(chat_id=chat_id, text=f"An error occurred: {str(e)}")
+
+        return ConversationHandler.END  # Or move to another state if you have more steps
 
 class HandleLocationSearch:
     @staticmethod
@@ -83,53 +95,67 @@ class HandleLocationSearch:
 
     async def scrape_immobiliare(city,folder):
             # Replace this URL with the specific results page URL for your city
+            # Set up the Selenium WebDriver. You might need to download a driver for this to work.
+            # driver = webdriver.Chrome()
             url = f'https://www.immobiliare.it/vendita-case/{city}/'
+            # Open the URL in Selenium
+            # driver.get(url)
+
+            # Wait for JavaScript to load (you might need to adjust the sleep time)
+            # import time
+            # time.sleep(5)
             
             logger.info("Serching in : %s",  url)
 
-            # Make an HTTP request to the URL
-            response = await requests.get(url)
-            print(type(response))
-            print(dir(response))
-            # Check if the request was successful
-            try:
-                if response.status_code != 200:
-                    logger.info("Failed to retrieve data")
+            print(folder)
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+            
+            # Make an HTTP request to the URL using aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    # Check if the request was successful
+                    if response.status != 200:
+                        logger.info("Failed to retrieve data")
+                        return
+                    html_content = await response.text()
+                    print(type(html_content))  # This should print <class 'str'>
+
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    print(soup.prettify())
+                    # Find elements that contain the data you're interested in
+                    # This is a placeholder example, you'll need to adjust selectors
+                    # based on the actual structure of the webpage
+                    # listings = soup.find_all('div', class_='in-reListCard')
+                    listings  =  soup.find('li', class_='nd-list__item in-reListItem')
+                    # listings = soup.find('li', {'class': 'nd-list__item in-reListItem'})
+                    print(len(listings))
+                    # print(listings)
+                    # sys.exit(1)
+                    # List to store each listing's information
+                    listings_data = []
+
+                    # Extract and print information from each listing
+                    for listing in listings:
+                        title_link = list_item.find('a', class_='in-reListCard__title')
+                        title = title_link.text if title_link else "No title found"
+                        link = title_link['href'] if title_link else "No link found"
                     
-                # Parse the HTML content
-                soup = BeautifulSoup(response.text, 'html.parser')
-            except Exception as e:
-                print("Exception {}".format(e))
-                asyncio.run(HandleLocationSearch.retrieve_status_code(url))
+                        # Append a dictionary for each listing to the list
+                        listings_data.append({
+                            'Title': title,
+                            'Link': link
+                        })
 
+                    # Write the list of dictionaries to a JSON file
+                    with open(f'{folder}/{city}_listings.json', 'w', encoding='utf-8') as file:
+                        json.dump(listings_data, file, ensure_ascii=False, indent=4)
 
-            # Find elements that contain the data you're interested in
-            # This is a placeholder example, you'll need to adjust selectors
-            # based on the actual structure of the webpage
-            listings = soup.find_all('div', class_='listing-item')
-            # List to store each listing's information
-            listings_data = []
+                    # Don't forget to close the driver
+                    # driver.quit()
 
-            # Extract and print information from each listing
-            for listing in listings:
-                title = listing.find('h2', class_='title').get_text(strip=True)
-                price = listing.find('li', class_='price').get_text(strip=True)
-                print(f'Title: {title}, Price: {price}')
-            
-                # Append a dictionary for each listing to the list
-                listings_data.append({
-                    'Title': title,
-                    'Price': price
-                })
-
-            # Write the list of dictionaries to a JSON file
-            with open(f'{folder}/{city}_listings.json', 'w', encoding='utf-8') as file:
-                json.dump(listings_data, file, ensure_ascii=False, indent=4)
-
-            return f"Data scraped and saved to {city}_listings.json"
-
-            
-
+                    return f"Data scraped and saved to {city}_listings.json"
+                
         # Example usage
         # scrape_immobiliare('milano')
 
@@ -144,7 +170,6 @@ class CancelHandler:
             reply_markup=ReplyKeyboardRemove()
         )
         return ConversationHandler.END
-    
 
 class TextHandler:
     @staticmethod

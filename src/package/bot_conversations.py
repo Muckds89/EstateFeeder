@@ -21,7 +21,10 @@ def get_conversation_handler():
         states={
             TYPE: [MessageHandler(filters.Regex("^(Affittare|Acquistare|Altro)$"), TypeHandler.receive_type)],
             QUERY_CITY: [MessageHandler(filters.TEXT, LocationHandler.receive_location)],
-            TRIGGER_SCRAPING: [MessageHandler(filters.Regex('^scrape$'), LocationHandler.trigger_scraping)],
+            # TRIGGER_SCRAPING: [MessageHandler(filters.Regex('^scrape$'), LocationHandler.trigger_scraping)],
+            TRIGGER_SCRAPING: [
+                CallbackQueryHandler(LocationHandler.trigger_scraping, pattern='^trigger_scrape$')
+            ],
             RESULTS: [MessageHandler(filters.TEXT, TextHandler.text)]
             # Add other states and handlers here
         },
