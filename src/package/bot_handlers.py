@@ -131,38 +131,40 @@ class HandleLocationSearch:
 
                 soup = BeautifulSoup(html_content, 'html.parser')
                 print(soup.prettify())
-                # Find elements that contain the data you're interested in
-                # This is a placeholder example, you'll need to adjust selectors
-                # based on the actual structure of the webpage
-                # listings = soup.find_all('div', class_='in-reListCard')
-                listings  =  soup.find('li', class_='nd-list__item in-reListItem')
-                # listings = soup.find('li', {'class': 'nd-list__item in-reListItem'})
-                print(len(listings))
-                # print(listings)
-                # sys.exit(1)
-                # List to store each listing's information
-                listings_data = []
 
-                # Extract and print information from each listing
-                for listing in listings:
-                    title_link = listing.find('a', class_='in-reListCard__title')
-                    title = title_link.text if title_link else "No title found"
-                    link = title_link['href'] if title_link else "No link found"
-                
-                    # Append a dictionary for each listing to the list
-                    listings_data.append({
-                        'Title': title,
-                        'Link': link
-                    })
+                if False:
+                    # Find elements that contain the data you're interested in
+                    # This is a placeholder example, you'll need to adjust selectors
+                    # based on the actual structure of the webpage
+                    # listings = soup.find_all('div', class_='in-reListCard')
+                    listings  =  soup.find('li', class_='nd-list__item in-reListItem')
+                    # listings = soup.find('li', {'class': 'nd-list__item in-reListItem'})
+                    print(len(listings))
+                    # print(listings)
+                    # sys.exit(1)
+                    # List to store each listing's information
+                    listings_data = []
 
-                # Write the list of dictionaries to a JSON file
-                with open(f'{folder}/{city}_{timestr}_listings.json', 'w', encoding='utf-8') as file:
-                    json.dump(listings_data, file, ensure_ascii=False, indent=4)
+                    # Extract and print information from each listing
+                    for listing in listings:
+                        title_link = listing.find('a', class_='in-reListCard__title')
+                        title = title_link.text if title_link else "No title found"
+                        link = title_link['href'] if title_link else "No link found"
+                    
+                        # Append a dictionary for each listing to the list
+                        listings_data.append({
+                            'Title': title,
+                            'Link': link
+                        })
 
-                # Don't forget to close the driver
-                # driver.quit()
+                    # Write the list of dictionaries to a JSON file
+                    with open(f'{folder}/{city}_{timestr}_listings.json', 'w', encoding='utf-8') as file:
+                        json.dump(listings_data, file, ensure_ascii=False, indent=4)
 
-                return f"Data scraped and saved to {folder}/{city}_{timestr}_listings.json"
+                with open(f'{folder}/{city}_{timestr}_soup.html', 'w', encoding='utf-8') as file:
+                    file.write(soup.prettify())
+
+                return f"Data scraped and saved to {folder}/{city}_{timestr}_listings.html"
             
     # Example usage
     # scrape_immobiliare('milano')
