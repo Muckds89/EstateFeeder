@@ -22,7 +22,7 @@ def main() -> None:
 
     logger = logging.getLogger(__name__)
 
-    application = Application.builder().token("").build()
+    application = Application.builder().token("6845005306:AAHASISYw1H_hry4h3GO_expZhr13lxXdOI").build()
 
     conv_handler = get_conversation_handler()
     application.add_handler(conv_handler)
